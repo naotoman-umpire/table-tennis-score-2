@@ -1,13 +1,251 @@
-<div class="player">
-  <h2>Player A</h2>
-  <div class="score" id="scoreA">0</div>
-  <button onclick="addPoint('A')">+1点</button>
-  <button onclick="reset('A')">リセット</button>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Table Tennis Scoreboard</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; padding: 20px; 
+      background: green;
+    }
+    .overlay {
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      padding: 15px;
+      margin: 10px;
+    }
+    .tabs { display: flex; margin-bottom: 10px; }
+    .tab {
+      padding: 10px 20px; border: 1px solid #ccc; cursor: pointer;
+      margin-right: 5px; border-radius: 8px 8px 0 0; background: #f0f0f0;
+    }
+    .tab.active { background: #fff; border-bottom: none; font-weight: bold; }
+    .tab-content {
+      border: 1px solid #ccc; padding: 20px; border-radius: 0 8px 8px 8px; display: none;
+    }
+    .tab-content.active { display: block; }
+    .players { display: flex; justify-content: space-around; }
+    .player { text-align: center; width: 40%; position: relative; }
+    .score { font-size: 4em; margin: 10px; }
+    button { font-size: 1em; margin: 5px; padding: 8px 16px; }
+    .serve-dot { color: red; font-size: 1.5em; position: absolute; top: 10px; right: 10px; }
+    .cards { margin-top: 10px; font-size: 1.5em; }
+    #winner { font-size: 2em; margin-top: 20px; text-align: center; color: green; }
+    #history { margin-top: 20px; font-size: 0.9em; background: #fff; padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h2>⚪ Table Tennis Scoreboard</h2>
 
-<div class="player">
-  <h2>Player B</h2>
-  <div class="score" id="scoreB">0</div>
-  <button onclick="addPoint('B')">+1点</button>
-  <button onclick="reset('B')">リセット</button>
-</div>
+    <!-- Match Settings -->
+    <div>
+      Match Type: 
+      <select id="matchType" onchange="setMatchType()">
+        <option value="3">3 Games (Best of 5)</option>
+        <option value="4">4 Games (Best of 7)</option>
+      </select>
+      &nbsp;&nbsp; First Server:
+      <select id="firstServerSelect" onchange="setFirstServer()">
+        <option value="A">Player A</option>
+        <option value="B">Player B</option>
+      </select>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('scoreTab')">Score & Timeout</div>
+      <div class="tab" onclick="showTab('cardsTab')">Cards</div>
+    </div>
+
+    <!-- Score & Timeout Tab -->
+    <div id="scoreTab" class="tab-content active">
+      <div class="players" id="court">
+        <div class="player" id="playerA">
+          <h2>Player A <span id="serveA" class="serve-dot"></span></h2>
+          <div class="score" id="scoreA">0</div>
+          <div>Games: <span id="gamesA">0</span></div>
+          <button onclick="addPoint('A')">+1 Point</button>
+          <button onclick="removePoint('A')">-1 Point</button><br>
+          <button onclick="timeout('A')">Timeout</button>
+          <button onclick="removeCard('A','timeout')">Undo Timeout</button>
+          <div class="cards" id="cardsA"></div>
+        </div>
+
+        <div class="player" id="playerB">
+          <h2>Player B <span id="serveB" class="serve-dot"></span></h2>
+          <div class="score" id="scoreB">0</div>
+          <div>Games: <span id="gamesB">0</span></div>
+          <button onclick="addPoint('B')">+1 Point</button>
+          <button onclick="removePoint('B')">-1 Point</button><br>
+          <button onclick="timeout('B')">Timeout</button>
+          <button onclick="removeCard('B','timeout')">Undo Timeout</button>
+          <div class="cards" id="cardsB"></div>
+        </div>
+      </div>
+      <div id="winner"></div>
+      <button onclick="nextGame()">Next Game</button>
+      <button onclick="resetMatch()">Reset Match</button>
+    </div>
+
+    <!-- Cards Tab -->
+    <div id="cardsTab" class="tab-content">
+      <h3>Card Management</h3>
+      <div class="players">
+        <div class="player">
+          <h2>Player A</h2>
+          <button onclick="card('A','yellow')">Add Yellow</button>
+          <button onclick="removeCard('A','yellow')">Remove Yellow</button><br>
+          <button onclick="card('A','red')">Add Red</button>
+          <button onclick="removeCard('A','red')">Remove Red</button>
+        </div>
+        <div class="player">
+          <h2>Player B</h2>
+          <button onclick="card('B','yellow')">Add Yellow</button>
+          <button onclick="removeCard('B','yellow')">Remove Yellow</button><br>
+          <button onclick="card('B','red')">Add Red</button>
+          <button onclick="removeCard('B','red')">Remove Red</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="history">
+      <h4>Game History</h4>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
+
+  <script>
+    let scoreA = 0, scoreB = 0;
+    let gamesA = 0, gamesB = 0;
+    let firstServer = 'A';
+    let serveTurn = firstServer;
+    let GAMES_TO_WIN = 3;
+    let gameNumber = 1;
+
+    // カード管理用
+    let cardCount = {
+      A: { yellow: 0, red: 0, timeout: 0 },
+      B: { yellow: 0, red: 0, timeout: 0 }
+    };
+
+    function setMatchType() {
+      let type = document.getElementById("matchType").value;
+      GAMES_TO_WIN = parseInt(type);
+      resetMatch();
+    }
+
+    function setFirstServer() {
+      firstServer = document.getElementById("firstServerSelect").value;
+      serveTurn = firstServer;
+      updateServer();
+    }
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function updateServer() {
+      let total = scoreA + scoreB;
+      if (scoreA >= 10 && scoreB >= 10) {
+        serveTurn = (total % 2 === 0) ? firstServer : (firstServer === 'A' ? 'B' : 'A');
+      } else {
+        serveTurn = (Math.floor(total / 2) % 2 === 0) ? firstServer : (firstServer === 'A' ? 'B' : 'A');
+      }
+      document.getElementById('serveA').innerText = (serveTurn === 'A') ? "🔴" : "";
+      document.getElementById('serveB').innerText = (serveTurn === 'B') ? "🔴" : "";
+    }
+
+    function addPoint(player) {
+      if (isGameFinished()) return; 
+      if (player === 'A') { scoreA++; }
+      else { scoreB++; }
+      updateScores();
+      updateServer();
+    }
+
+    function removePoint(player) {
+      if (player === 'A' && scoreA > 0) scoreA--;
+      if (player === 'B' && scoreB > 0) scoreB--;
+      updateScores();
+      updateServer();
+    }
+
+    function updateScores() {
+      document.getElementById('scoreA').innerText = scoreA;
+      document.getElementById('scoreB').innerText = scoreB;
+    }
+
+    function isGameFinished() {
+      return ((scoreA >= 11 || scoreB >= 11) && Math.abs(scoreA - scoreB) >= 2);
+    }
+
+    function nextGame() {
+      if (!isGameFinished()) return;
+      if (scoreA > scoreB) gamesA++;
+      else gamesB++;
+      document.getElementById('gamesA').innerText = gamesA;
+      document.getElementById('gamesB').innerText = gamesB;
+
+      // 履歴に追加
+      let history = document.getElementById('historyList');
+      let li = document.createElement('li');
+      li.innerText = `Game ${gameNumber}: ${scoreA}-${scoreB}, Winner ${scoreA>scoreB?'Player A':'Player B'}, First Server ${firstServer}`;
+      history.appendChild(li);
+
+      gameNumber++;
+      scoreA = 0; scoreB = 0;
+      firstServer = (firstServer === 'A') ? 'B' : 'A';
+      updateScores();
+      updateServer();
+    }
+
+    // カード関数
+    function updateCards(player) {
+      let el = (player==='A') ? document.getElementById('cardsA') : document.getElementById('cardsB');
+      let cards = [];
+      for(let i=0;i<cardCount[player].timeout;i++) cards.push("⬜");
+      for(let i=0;i<cardCount[player].yellow;i++) cards.push("🟨");
+      for(let i=0;i<cardCount[player].red;i++) cards.push("🟥");
+      el.innerText = cards.join("");
+    }
+
+    function card(player, type) {
+      if(cardCount[player][type]!==undefined) {
+        cardCount[player][type]++;
+        updateCards(player);
+      }
+    }
+
+    function removeCard(player, type) {
+      if(cardCount[player][type] && cardCount[player][type]>0) {
+        cardCount[player][type]--;
+        updateCards(player);
+      }
+    }
+
+    function timeout(player) {
+      card(player,'timeout');
+    }
+
+    function resetMatch() {
+      scoreA = 0; scoreB = 0; gamesA = 0; gamesB = 0; gameNumber=1;
+      document.getElementById('scoreA').innerText = scoreA;
+      document.getElementById('scoreB').innerText = scoreB;
+      document.getElementById('gamesA').innerText = gamesA;
+      document.getElementById('gamesB').innerText = gamesB;
+      cardCount = { A: { yellow:0, red:0, timeout:0 }, B: { yellow:0, red:0, timeout:0 } };
+      updateCards('A');
+      updateCards('B');
+      document.getElementById('historyList').innerHTML="";
+      setFirstServer();
+    }
+
+    setFirstServer();
+  </script>
+</body>
+</html>
