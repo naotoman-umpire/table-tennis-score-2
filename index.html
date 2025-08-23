@@ -1,93 +1,13 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>卓球スコアボード</title>
-<style>
-body { font-family: Arial, sans-serif; text-align: center; }
-.score { font-size: 3em; margin: 20px; }
-button { font-size: 1.2em; margin: 5px; padding: 10px 20px; }
-.serve { color: red; font-weight: bold; }
-</style>
-</head>
-<body>
-<h1>卓球スコアボード</h1>
-
-<div>
-<h2>Player A: <span id="scoreA">0</span> <span id="serveA" class="serve"></span></h2>
-<button onclick="addPoint('A')">+1点</button>
-<button onclick="yellowCard('A')">黄</button>
-<button onclick="redCard('A')">赤</button>
+<div class="player">
+  <h2>Player A</h2>
+  <div class="score" id="scoreA">0</div>
+  <button onclick="addPoint('A')">+1点</button>
+  <button onclick="reset('A')">リセット</button>
 </div>
 
-<div>
-<h2>Player B: <span id="scoreB">0</span> <span id="serveB" class="serve"></span></h2>
-<button onclick="addPoint('B')">+1点</button>
-<button onclick="yellowCard('B')">黄</button>
-<button onclick="redCard('B')">赤</button>
+<div class="player">
+  <h2>Player B</h2>
+  <div class="score" id="scoreB">0</div>
+  <button onclick="addPoint('B')">+1点</button>
+  <button onclick="reset('B')">リセット</button>
 </div>
-
-<h2 id="status"></h2>
-<div id="cards"></div>
-
-<script>
-let scoreA = 0, scoreB = 0;
-let totalPoints = 0; // 何ポイント経過したか
-let server = 'A'; // 現在のサーバー
-let cards = [];
-
-function addPoint(player) {
-if (player === 'A') {
-scoreA++;
-document.getElementById('scoreA').innerText = scoreA;
-} else {
-scoreB++;
-document.getElementById('scoreB').innerText = scoreB;
-}
-totalPoints++;
-updateServe();
-checkDeuce();
-}
-
-function updateServe() {
-let deuce = (scoreA >= 10 && scoreB >= 10);
-let interval = deuce ? 1 : 2;
-
-if (totalPoints % interval === 0) {
-server = (server === 'A') ? 'B' : 'A';
-}
-
-document.getElementById('serveA').innerText = (server === 'A') ? "●" : "";
-document.getElementById('serveB').innerText = (server === 'B') ? "●" : "";
-}
-
-function checkDeuce() {
-if (scoreA >= 10 && scoreB >= 10) {
-document.getElementById('status').innerText = "デュース！";
-if (Math.abs(scoreA - scoreB) >= 2) {
-document.getElementById('status').innerText =
-(scoreA > scoreB ? "Player A 勝利！" : "Player B 勝利！");
-}
-} else if (scoreA >= 11 && scoreA - scoreB >= 2) {
-document.getElementById('status').innerText = "Player A 勝利！";
-} else if (scoreB >= 11 && scoreB - scoreA >= 2) {
-document.getElementById('status').innerText = "Player B 勝利！";
-}
-}
-
-function yellowCard(player) {
-cards.push(`${player} にイエローカード`);
-renderCards();
-}
-
-function redCard(player) {
-cards.push(`${player} にレッドカード`);
-renderCards();
-}
-
-function renderCards() {
-document.getElementById('cards').innerHTML = cards.join("<br>");
-}
-</script>
-</body>
-</html>
