@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>卓球スコアボード</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    .score { font-size: 4em; margin: 20px; }
+    button { font-size: 1.5em; margin: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h1>卓球スコアボード</h1>
+  <div>
+    <h2>Player A: <span id="scoreA">0</span></h2>
+    <button onclick="addPoint('A')">+1点</button>
+    <button onclick="reset('A')">リセット</button>
+  </div>
+  <div>
+    <h2>Player B: <span id="scoreB">0</span></h2>
+    <button onclick="addPoint('B')">+1点</button>
+    <button onclick="reset('B')">リセット</button>
+  </div>
+
+  <script>
+    let scoreA = 0, scoreB = 0;
+
+    function addPoint(player) {
+      if (player === 'A') {
+        scoreA++;
+        document.getElementById('scoreA').innerText = scoreA;
+      } else {
+        scoreB++;
+        document.getElementById('scoreB').innerText = scoreB;
+      }
+    }
+
+    function reset(player) {
+      if (player === 'A') {
+        scoreA = 0;
+        document.getElementById('scoreA').innerText = scoreA;
+      } else {
+        scoreB = 0;
+        document.getElementById('scoreB').innerText = scoreB;
+      }
+    }
+  </script>
+</body>
+</html>
