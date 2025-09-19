@@ -62,15 +62,15 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
   margin-top: 20px;
 }
 
-.gamepoint {
-  position: absolute;
-  top: -20px;   /* 上方向に移動 */
-  right: 0;     /* 右に寄せる */
-  font-size: 1.5em;
-  color: red;
-  font-weight: bold;
+.pointStatus {
+    font-size: 1.3em;    
+    font-weight: normal;
+    color: red;
+    line-height: 0.4;
+    height: 1em;            /* ← 高さを固定する */
+    display: block;         /* 常に同じ高さを占める */
+    text-align: center;
 }
-
 
 
 
@@ -109,7 +109,7 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
 </div>
 
 <div class="overlay" id="mainScreen" style="display:none;">
-<h2>⚪ TABLE TENNIS SCOREBOARD</h2>
+
 <div id="winner"></div>
 
 <div id="timerDisplay"></div>
@@ -154,7 +154,8 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
   <span id="scoreA" class="score">0</span>
   <span id="serveA" class="serve"></span>
 </div>
-<div><span id="pointAStatus" class="status"></span></div>
+<div class="pointStatus" id="pointStatusA">&nbsp;</div>
+<div><span id="pointAStatus" class="pointStatus"></span></div>
 
 
       <button class="point-btn" onclick="addPoint('A')">+1 POINT</button>
@@ -172,7 +173,9 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
   <span class="games" id="gamesB">0</span>
   <span id="serveB" class="serve"></span>
 </div>
-<div><span id="pointBStatus" class="status"></span></div>
+<div class="pointStatus" id="pointStatusB">&nbsp;</div>
+<div><span id="pointBStatus" class="pointStatus"></span></div>
+
 
  <button class="point-btn" onclick="addPoint('B')">+1 POINT</button>
       <button onclick="removePoint('B')">-1 POINT</button><br>
@@ -575,6 +578,55 @@ function resetMatch(){
 
     enableControls();
 }
+
+let expediteActive = false;
+
+// ボタン押下で促進ルール発動
+function activateExpedite(){
+    expediteActive = true;
+    // サーブ選択画面に移動
+    document.getElementById('positionScreen').style.display = 'flex';
+    document.getElementById('mainScreen').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('firstServerDisplay').innerText = "SELECT NEXT SERVER";
+}
+
+// サーバー選択後の処理
+function selectNextServer(player){
+    firstServer = player; // 次のサーブを設定
+    updateServer();
+    // メイン画面に戻る
+    document.getElementById('mainScreen').style.display = 'block';
+    document.getElementById('positionScreen').style.display = 'none';
+}
+
+// サーブ更新関数を変更
+function updateServer(){
+    if(isGameFinished()){ 
+        document.getElementById('serveA').innerText=""; 
+        document.getElementById('serveB').innerText=""; 
+        return; 
+    }
+
+    let total = scoreA + scoreB;
+
+    if(expediteActive){
+        // 促進ルール: 1ポイントごとに交代
+        serveTurn = (total % 2 === 0) ? firstServer : (firstServer==='A'?'B':'A');
+    } else {
+        // 通常ルール: 2ポイントごとに交代
+        if(scoreA>=10 && scoreB>=10){
+            serveTurn = (total % 2 === 0) ? firstServer : (firstServer==='A'?'B':'A');
+        } else {
+            serveTurn = (Math.floor(total/2) % 2 ===0)? firstServer : (firstServer==='A'?'B':'A');
+        }
+    }
+
+    document.getElementById('serveA').innerText=(serveTurn==='A')?"🔴":"";
+    document.getElementById('serveB').innerText=(serveTurn==='B')?"🔴":"";
+}
+
+
 
 
 
