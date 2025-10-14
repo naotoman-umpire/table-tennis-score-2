@@ -128,9 +128,10 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
 <div>
   Match Type: 
   <select id="matchType" onchange="setMatchType()">
-    <option value="3">3 Games (Best of 5)</option>
-    <option value="4">4 Games (Best of 7)</option>
-  </select>
+  <option value="2">2 Games (Best of 3)</option>
+  <option value="3" selected>3 Games (Best of 5)</option>
+  <option value="4">4 Games (Best of 7)</option>
+</select>
   &nbsp;&nbsp; First Server:
   <span id="firstServerDisplay"></span>
   <button onclick="setPosition()" style="font-size:0.9em;">SET POSITION</button>
@@ -669,7 +670,27 @@ function updateServer(){
     document.getElementById('serveB').innerText = (serveTurn==='B') ? "🔴" : "";
 }
 
+function chooseExpediteServer(player) {
+    // 押した側をサーバーとして設定
+    firstServer = player;
 
+    // 促進ルール開始
+    expediteActive = true;
+    document.getElementById("expediteStatus").innerText = "EXPEDITE SYSTEM ACTIVE (1 serve only)";
+    document.getElementById("expediteModal").style.display = "none";
+    document.getElementById("stopExpediteBtn").style.display = "inline-block";
+
+    updateServer(); // ここで正しく反映
+}
+
+function setMatchType(){
+  const selected = parseInt(document.getElementById("matchType").value);
+  // 選択値を「勝利に必要なゲーム数」に変換
+  if (selected === 2) GAMES_TO_WIN = 2;  // Best of 3
+  else if (selected === 3) GAMES_TO_WIN = 3; // Best of 5
+  else if (selected === 4) GAMES_TO_WIN = 4; // Best of 7
+  resetMatch();
+}
 
     
 
