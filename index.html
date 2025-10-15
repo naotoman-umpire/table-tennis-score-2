@@ -763,21 +763,6 @@ function updateTimerDisplay(){
     document.getElementById('timerDisplay').innerText = `${timerLabel} ${formatted}`;
 }
 
-function startTimer(label, seconds){
-    timerLabel = label;
-    timerSeconds = seconds;
-    clearInterval(timerInterval);
-    document.getElementById('timerDisplay').style.display = 'block'; // 表示する
-    updateTimerDisplay();
-    timerInterval = setInterval(()=>{
-        timerSeconds--;
-        updateTimerDisplay();
-        if(timerSeconds <= 0){
-            clearInterval(timerInterval);
-            document.getElementById('timerDisplay').style.display = 'none'; // ⏱️ゼロになったら非表示
-        }
-    },1000);
-}
    
 
 
