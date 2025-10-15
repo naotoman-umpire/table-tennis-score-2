@@ -72,6 +72,58 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
     text-align: center;
 }
 
+#history {
+  max-height: 40vh; /* 画面の40%までに制限 */
+  overflow-y: auto; /* はみ出したらスクロール */
+}
+
+#timerDisplay {
+  color: blue;           /* ←ここを赤から青に */
+  font-weight: bold;
+  font-size: 2em;
+}
+
+.card-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.card {
+  width: 60px;
+  height: 80px;
+  border: 2px solid #333;
+  border-radius: 8px;
+  font-size: 1.5em;
+  font-weight: bold;
+  cursor: pointer;
+  color: #000;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(0,0,0,0.3);
+}
+
+.card.yellow {
+  background-color: #ffeb3b; /* 明るい黄色 */
+}
+
+.card.red {
+  background-color: #f44336; /* 鮮やかな赤 */
+  color: #fff;
+}
+
+.card.remove {
+  opacity: 0.7;
+  font-size: 1.3em;
+}
+
+.card.remove:hover {
+  opacity: 1;
+}
 
 
 /* サーブレット中央下部配置 */
@@ -141,7 +193,6 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
 <div class="tabs">
   <div class="tab active" onclick="showTab('scoreTab', event)">Score & Timeout</div>
   <div class="tab" onclick="showTab('cardsTab', event)">Cards</div>
-  <div class="tab" onclick="showTab('historyTab', event)">History</div>
 </div>
 
 <div id="scoreTab" class="tab-content active">
@@ -202,20 +253,27 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
   <div class="players">
     <div class="player">
       <h2>PLAYER A</h2>
-      <button onclick="card('A','yellow')">ADD YELLOW</button>
-      <button onclick="removeCard('A','yellow')">REMOVE YELLOW</button><br>
-      <button onclick="card('A','red')">ADD RED</button>
-      <button onclick="removeCard('A','red')">REMOVE RED</button>
+      <div class="card-buttons">
+        <button class="card yellow" onclick="card('A','yellow')">+</button>
+        <button class="card yellow remove" onclick="removeCard('A','yellow')">−</button>
+        <button class="card red" onclick="card('A','red')">+</button>
+        <button class="card red remove" onclick="removeCard('A','red')">−</button>
+      </div>
     </div>
     <div class="player">
       <h2>PLAYER B</h2>
-      <button onclick="card('B','yellow')">ADD YELLOW</button>
-      <button onclick="removeCard('B','yellow')">REMOVE YELLOW</button><br>
-      <button onclick="card('B','red')">ADD RED</button>
-      <button onclick="removeCard('B','red')">REMOVE RED</button>
+      <div class="card-buttons">
+        <button class="card yellow" onclick="card('B','yellow')">+</button>
+        <button class="card yellow remove" onclick="removeCard('B','yellow')">−</button>
+        <button class="card red" onclick="card('B','red')">+</button>
+        <button class="card red remove" onclick="removeCard('B','red')">−</button>
+      </div>
     </div>
   </div>
 </div>
+
+
+
 
 <!-- 促進ルールボタン -->
 <button onclick="showExpediteServeSelect()">ACTIVATE EXPEDITE</button>
@@ -356,7 +414,13 @@ function startTimer(){ clearInterval(timerInterval); timerInterval=setInterval((
 function stopTimer(){ clearInterval(timerInterval); }
 function resetTimer(){ if(timerLabel==="WARM UP") timerSeconds=120; else timerSeconds=(timerLabel==="WATER BREAK")?60:60; updateTimerDisplay(); }
 function forceEndTimer(){ clearInterval(timerInterval); timerSeconds=0; timerLabel=""; document.getElementById('timerDisplay').innerText=""; showTimerButtons(false); document.getElementById('clearTimerBtn').style.display="none"; }
-function updateTimerDisplay(){ document.getElementById('timerDisplay').innerText=`${timerLabel} ${timerSeconds}s`; }
+function updateTimerDisplay(){
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+    const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    document.getElementById('timerDisplay').innerText = `${timerLabel} ${formatted}`;
+}
+
 
 // ----------------------------
 // 次ゲーム
@@ -692,10 +756,32 @@ function setMatchType(){
   resetMatch();
 }
 
-    
+function updateTimerDisplay(){
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+    const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    document.getElementById('timerDisplay').innerText = `${timerLabel} ${formatted}`;
+}
+
+function startTimer(label, seconds){
+    timerLabel = label;
+    timerSeconds = seconds;
+    clearInterval(timerInterval);
+    document.getElementById('timerDisplay').style.display = 'block'; // 表示する
+    updateTimerDisplay();
+    timerInterval = setInterval(()=>{
+        timerSeconds--;
+        updateTimerDisplay();
+        if(timerSeconds <= 0){
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').style.display = 'none'; // ⏱️ゼロになったら非表示
+        }
+    },1000);
+}
+   
 
 
 </script>
 
 </body>
-</html>　　
+</html>　　　
