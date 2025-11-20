@@ -190,10 +190,31 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
   <button onclick="correctServer()" style="font-size:0.9em;">CHANGE FIRST SERVER</button>
 </div>
 
+
+
 <div class="tabs">
   <div class="tab active" onclick="showTab('scoreTab', event)">Score & Timeout</div>
   <div class="tab" onclick="showTab('cardsTab', event)">Cards</div>
+  <div class="tab" onclick="showTab('expediteTab', event)">Expedite</div>
 </div>
+
+<div id="expediteTab" class="tab-content">
+  <h3>EXPEDITE RULE</h3>
+  <p>Manage the expedite system for this match.</p>
+
+  <button onclick="activateExpediteRule()" 
+          id="startExpediteBtn"
+          style="font-size:1.3em; padding:15px 25px; background-color:#ff9800; color:white; border:none; border-radius:10px; cursor:pointer; margin:10px;">
+    START EXPEDITE RULE
+  </button>
+
+  <button onclick="deactivateExpediteRule()" 
+          id="stopExpediteBtn"
+          style="font-size:1.3em; padding:15px 25px; background-color:#555; color:white; border:none; border-radius:10px; cursor:pointer; margin:10px;">
+    STOP EXPEDITE RULE
+  </button>
+</div>
+
 
 <div id="scoreTab" class="tab-content active">
   <div class="players" id="court">
@@ -274,28 +295,9 @@ button { font-size:1em; margin:5px; padding:8px 16px; }
 
 
 
-
-<!-- 促進ルールボタン -->
-<button onclick="showExpediteServeSelect()">ACTIVATE EXPEDITE</button>
-<button id="stopExpediteBtn" onclick="stopExpedite()" style="display:none;">STOP EXPEDITE</button>
-
-<!-- サーブ選択モーダル -->
-<div id="expediteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center;">
-  <div style="background:white; padding:20px; border-radius:10px; text-align:center; min-width:250px;">
-    <h2>Expedite Rule - Select Server</h2>
-    <button onclick="startExpedite('A')">Player A Serve</button>
-    <button onclick="startExpedite('B')">Player B Serve</button>
-    <br><br>
-    <button onclick="cancelExpedite()" style="color:white; background:gray; padding:5px 15px; border:none; border-radius:5px;">Cancel</button>
   </div>
 </div>
 
-<!-- 状態表示 -->
-<div id="expediteStatus" style="font-size:1.5em; color:red; font-weight:bold; margin-top:10px;"></div>
-
-
-  </div>
-</div>
 
 
 
@@ -670,82 +672,7 @@ function resetMatch(){
     enableControls();
 }
 
-let expediteActive = false;
 
-// サーブ選択画面を表示
-function showExpediteServeSelect(){
-    document.getElementById("expediteModal").style.display = "flex";
-}
-
-// サーブ選択後に促進ルール発動
-function startExpedite(server){
-    expediteActive = true;
-    firstServer = server; // 選択した側が次のサーブ
-    document.getElementById("expediteStatus").innerText = "EXPEDITE SYSTEM ACTIVE (1 serve only)";
-    document.getElementById("expediteModal").style.display = "none";
-    document.getElementById("stopExpediteBtn").style.display = "inline-block"; // 停止ボタン表示
-    updateServer(); // サーブ更新
-}
-
-// キャンセル（促進ルールを発動しない）
-function cancelExpedite(){
-    document.getElementById("expediteModal").style.display = "none";
-    expediteActive = false; // 念のため
-}
-
-// 促進ルールを停止して通常ルールに戻す
-function stopExpedite(){
-    expediteActive = false;
-    document.getElementById("expediteStatus").innerText = "";
-    document.getElementById("stopExpediteBtn").style.display = "none";
-    updateServer(); // サーブ更新（通常ルールに戻る）
-}
-
-function updateServer(){ 
-    if(isGameFinished()){
-        document.getElementById('serveA').innerText="";
-        document.getElementById('serveB').innerText="";
-        return;
-    }
-
-    let total = scoreA + scoreB;
-
-    if(expediteActive){
-        // 🟥 促進ルール発動中 → 常に1本交代
-        serveTurn = (total % 2 === 0) 
-            ? firstServer 
-            : (firstServer === 'A' ? 'B' : 'A');
-    } else {
-        // 🟦 通常ルール
-        if(scoreA >= 10 && scoreB >= 10){
-            // デュース以降は1本交代
-            serveTurn = (total % 2 === 0) 
-                ? firstServer 
-                : (firstServer === 'A' ? 'B' : 'A');
-        } else {
-            // それ以外は2本交代
-            serveTurn = (Math.floor(total/2) % 2 === 0) 
-                ? firstServer 
-                : (firstServer === 'A' ? 'B' : 'A');
-        }
-    }
-
-    document.getElementById('serveA').innerText = (serveTurn==='A') ? "🔴" : "";
-    document.getElementById('serveB').innerText = (serveTurn==='B') ? "🔴" : "";
-}
-
-function chooseExpediteServer(player) {
-    // 押した側をサーバーとして設定
-    firstServer = player;
-
-    // 促進ルール開始
-    expediteActive = true;
-    document.getElementById("expediteStatus").innerText = "EXPEDITE SYSTEM ACTIVE (1 serve only)";
-    document.getElementById("expediteModal").style.display = "none";
-    document.getElementById("stopExpediteBtn").style.display = "inline-block";
-
-    updateServer(); // ここで正しく反映
-}
 
 function setMatchType(){
   const selected = parseInt(document.getElementById("matchType").value);
@@ -763,10 +690,163 @@ function updateTimerDisplay(){
     document.getElementById('timerDisplay').innerText = `${timerLabel} ${formatted}`;
 }
 
-   
+
+
+/* ===========================
+   🚀 EXPEDITE RULE (促進ルール)
+   =========================== */
+
+/* ===========================
+   🚀 EXPEDITE RULE（促進ルール）
+   =========================== */
+
+let expediteMode = false;
+let expediteFirstServer = null;
+let lastTotalPoints = 0;  // ←★ ここが最も重要
+
+// --- 促進ルール開始画面 ---
+function activateExpediteRule() {
+    if (expediteMode) {
+        alert("Expedite Rule is already active.");
+        return;
+    }
+
+    const screen = document.createElement("div");
+    screen.id = "expediteSelectScreen";
+    screen.style = `
+        position: fixed; top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        z-index: 99999; color: white;
+    `;
+    screen.innerHTML = `
+        <h2 style="font-size:2em; margin-bottom:1em;">Expedite Rule</h2>
+        <p>Select who serves first:</p>
+        <div style="margin-top:1em;">
+            <button id="expServeA" style="font-size:1.4em; margin:0.5em;">PLAYER A</button>
+            <button id="expServeB" style="font-size:1.4em; margin:0.5em;">PLAYER B</button>
+        </div>
+    `;
+    document.body.appendChild(screen);
+
+    document.getElementById("expServeA").onclick = () => startExpedite("A");
+    document.getElementById("expServeB").onclick = () => startExpedite("B");
+}
+
+// --- 促進ルール開始処理 ---
+function startExpedite(server) {
+    expediteMode = true;
+    expediteFirstServer = server;
+    serveTurn = server;           // ←★ 必ず選んだ人がサーブ
+    lastTotalPoints = scoreA + scoreB;  // ←★ 直後に updateServer で交代させないためのロック
+
+    document.getElementById("expediteSelectScreen").remove();
+
+    // バナー表示
+    const banner = document.createElement("div");
+    banner.id = "expediteBanner";
+    banner.textContent = "EXPEDITE RULE IN EFFECT (1-serve alternation)";
+    banner.style = `
+        position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+        background: #ff3333; color: white;
+        padding: 0.5em 1.2em; border-radius: 10px;
+        z-index: 9999; font-weight: bold;
+    `;
+    document.body.appendChild(banner);
+
+    updateServer(); // ←★ 完全に修正された updateServer で確定表示
+}
+
+/* ---------------------------------
+     🚨 ここが今回の修正の核心部分
+-----------------------------------*/
+function updateServer() {
+    let total = scoreA + scoreB;
+
+    if (expediteMode) {
+        // ★ 促進ルールに入った直後は total が変わっていないので交代させない
+        if (total !== lastTotalPoints) {
+            // 1 点入ったら交代
+            serveTurn = (serveTurn === "A") ? "B" : "A";
+            lastTotalPoints = total;  // 点数を更新
+        }
+
+        // 表示更新
+        document.getElementById("serveA").innerText = (serveTurn === "A") ? "🔴" : "";
+        document.getElementById("serveB").innerText = (serveTurn === "B") ? "🔴" : "";
+        return; // 通常ロジックを完全停止
+    }
+
+    /* ===== ここから通常サーブロジック ===== */
+
+    if (isGameFinished()) {
+        document.getElementById("serveA").innerText = "";
+        document.getElementById("serveB").innerText = "";
+        return;
+    }
+
+    if (scoreA >= 10 && scoreB >= 10) {
+        serveTurn = (total % 2 === 0) ? firstServer : (firstServer === "A" ? "B" : "A");
+    } else {
+        serveTurn = (Math.floor(total / 2) % 2 === 0) ? firstServer : (firstServer === "A" ? "B" : "A");
+    }
+
+    document.getElementById("serveA").innerText = (serveTurn === "A") ? "🔴" : "";
+    document.getElementById("serveB").innerText = (serveTurn === "B") ? "🔴" : "";
+}
+
+/* --- 停止処理 --- */
+function deactivateExpediteRule() {
+    expediteMode = false;
+    expediteFirstServer = null;
+    lastTotalPoints = 0;
+
+    if (document.getElementById("expediteBanner")) {
+        document.getElementById("expediteBanner").remove();
+    }
+
+    updateServer();
+}
+
+// ★ 促進ルール込みの resetMatch 完全版
+const originalResetMatch = resetMatch;   // ← 既存 resetMatch を保存しておく
+
+resetMatch = function(silent = false) {
+
+    // --- 促進ルールを完全解除 ---
+    expediteMode = false;
+    expediteFirstServer = null;
+    lastTotalPoints = 0;
+
+    // バナー削除
+    const banner = document.getElementById("expediteBanner");
+    if (banner) banner.remove();
+
+    // ボタン初期化
+    const startBtn = document.getElementById("startExpediteBtn");
+    const stopBtn = document.getElementById("stopExpediteBtn");
+    if (startBtn && stopBtn) {
+        startBtn.disabled = false;
+        startBtn.style.opacity = "1";
+        stopBtn.disabled = true;
+        stopBtn.style.opacity = "0.6";
+    }
+
+    // --- 本来のリセット処理を実行 ---
+    originalResetMatch(silent);
+
+    // サーブ表示リセット
+    document.getElementById("serveA").innerText = "";
+    document.getElementById("serveB").innerText = "";
+};
+
+
+
 
 
 </script>
 
 </body>
-</html>　　　
+</html>　　　　
